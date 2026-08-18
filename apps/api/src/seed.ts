@@ -102,6 +102,8 @@ async function seed() {
   const hashedPassword = await bcrypt.hash('password123', 12);
   const users = await Promise.all([
     prisma.user.create({ data: { id: uuid(), orgId: org.id, email: 'admin@acme.dev', name: 'Admin User', password: hashedPassword, role: 'admin', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin' } }),
+    prisma.user.create({ data: { id: uuid(), orgId: org.id, email: 'vaikul.gandi@gmail.com', name: 'Vaikul Gandi', password: hashedPassword, role: 'admin', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=vaikul' } }),
+    prisma.user.create({ data: { id: uuid(), orgId: org.id, email: 'aaliyah@gmail.com', name: 'Aaliyah', password: hashedPassword, role: 'admin', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=aaliyah' } }),
     prisma.user.create({ data: { id: uuid(), orgId: org.id, email: 'alice@acme.dev', name: 'Alice Chen', password: hashedPassword, role: 'deployer', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice' } }),
     prisma.user.create({ data: { id: uuid(), orgId: org.id, email: 'bob@acme.dev', name: 'Bob Martinez', password: hashedPassword, role: 'deployer', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob' } }),
     prisma.user.create({ data: { id: uuid(), orgId: org.id, email: 'viewer@acme.dev', name: 'Carol Davis', password: hashedPassword, role: 'viewer', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=carol' } }),
@@ -273,6 +275,8 @@ async function seed() {
   console.log('\n🎉 Seed complete!\n');
   console.log('📧 Login credentials:');
   console.log('   admin@acme.dev / password123 (Admin)');
+  console.log('   vaikul.gandi@gmail.com / password123 (Admin)');
+  console.log('   aaliyah@gmail.com / password123 (Admin)');
   console.log('   alice@acme.dev / password123 (Deployer)');
   console.log('   viewer@acme.dev / password123 (Viewer)');
 }

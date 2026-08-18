@@ -31,11 +31,12 @@ const AUTHORS = ['alice', 'bob', 'charlie', 'diana', 'erik', 'fiona', 'george', 
 const BRANCHES = ['main', 'main', 'main', 'develop', 'feature/auth', 'fix/memory-leak', 'release/v2.4'];
 
 const PROJECTS = [
-  { name: 'payments-api', repo: 'https://github.com/acme/payments-api' },
-  { name: 'auth-service', repo: 'https://github.com/acme/auth-service' },
-  { name: 'user-portal', repo: 'https://github.com/acme/user-portal' },
-  { name: 'cart-service', repo: 'https://github.com/acme/cart-service' },
-  { name: 'notification-engine', repo: 'https://github.com/acme/notification-engine' },
+  { name: 'payments-api', repo: 'https://github.com/acme/payments-api', ciProvider: 'github_actions' },
+  { name: 'auth-service', repo: 'https://github.com/acme/auth-service', ciProvider: 'github_actions' },
+  { name: 'user-portal', repo: 'https://github.com/acme/user-portal', ciProvider: 'github_actions' },
+  { name: 'cart-service', repo: 'https://github.com/acme/cart-service', ciProvider: 'github_actions' },
+  { name: 'notification-engine', repo: 'https://github.com/acme/notification-engine', ciProvider: 'github_actions' },
+  { name: 'vercel-production-app', repo: 'https://vercel.com/acme/production-app', ciProvider: 'custom' },
 ];
 
 const ENVIRONMENTS = [
@@ -118,7 +119,7 @@ async function seed() {
         orgId: org.id,
         name: proj.name,
         repoUrl: proj.repo,
-        ciProvider: 'github_actions',
+        ciProvider: proj.ciProvider || 'github_actions',
       },
     });
 

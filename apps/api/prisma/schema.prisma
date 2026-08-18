@@ -1,0 +1,226 @@
+// ─── Prisma Schema for SEQA Release Pipeline Visualizer ─────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ─── Organizations ──────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  projects Project[]
+  users    User[]
+
+  @@map("organizations")
+}
+
+// ─── Projects ───────────────────────────────────────────────────────
+
+model Project {
+  id         String   @id @default(uuid())
+  orgId      String   @map("org_id")
+  name       String
+  repoUrl    String   @default("") @map("repo_url")
+  ciProvider String   @default("github_actions") @map("ci_provider")
+  ciConfig   String   @default("{}") @map("ci_config")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  organization Organization  @relation(fields: [orgId], references: [id])
+  environments Environment[]
+  builds       Build[]
+  deployments  Deployment[]
+  alertRules   AlertRule[]
+
+  @@map("projects")
+}
+
+// ─── Environments ───────────────────────────────────────────────────
+
+model Environment {
+  id             String   @id @default(uuid())
+  projectId      String   @map("project_id")
+  name           String
+  order          Int      @default(0)
+  isProduction   Boolean  @default(false) @map("is_production")
+  healthCheckUrl String?  @map("health_check_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  project     Project      @relation(fields: [projectId], references: [id])
+  deployments Deployment[]
+
+  @@unique([projectId, name])
+  @@map("environments")
+}
+
+// ─── Builds ─────────────────────────────────────────────────────────
+
+model Build {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  buildNumber Int       @map("build_number")
+  commitSha   String    @map("commit_sha")
+  branch      String    @default("main")
+  author      String
+  message     String
+  ciBuildId   String?   @map("ci_build_id")
+  ciBuildUrl  String?   @map("ci_build_url")
+  status      String    @default("pending")
+  startedAt   DateTime? @map("started_at")
+  finishedAt  DateTime? @map("finished_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  project     Project      @relation(fields: [projectId], references: [id])
+  artifacts   Artifact[]
+  deployments Deployment[]
+
+  @@unique([projectId, buildNumber])
+  @@map("builds")
+}
+
+// ─── Artifacts ──────────────────────────────────────────────────────
+
+model Artifact {
+  id          String   @id @default(uuid())
+  buildId     String   @map("build_id")
+  name        String
+  type        String   @default("docker_image")
+  registryUrl String?  @map("registry_url")
+  sizeBytes   Int?     @map("size_bytes")
+  checksum    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  build       Build        @relation(fields: [buildId], references: [id])
+  deployments Deployment[]
+
+  @@map("artifacts")
+}
+
+// ─── Deployments ────────────────────────────────────────────────────
+
+model Deployment {
+  id            String    @id @default(uuid())
+  projectId     String    @map("project_id")
+  environmentId String    @map("environment_id")
+  buildId       String    @map("build_id")
+  artifactId    String?   @map("artifact_id")
+  initiatedBy   String    @map("initiated_by")
+  status        String    @default("queued")
+  strategy      String    @default("rolling")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  durationMs    Int?      @map("duration_ms")
+  metadata      String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  project      Project         @relation(fields: [projectId], references: [id])
+  environment  Environment     @relation(fields: [environmentId], references: [id])
+  build        Build           @relation(fields: [buildId], references: [id])
+  artifact     Artifact?       @relation(fields: [artifactId], references: [id])
+  initiator    User            @relation("DeploymentInitiator", fields: [initiatedBy], references: [id])
+  rollbacks    Rollback[]      @relation("DeploymentRollbacks")
+  rolledBackTo Rollback[]      @relation("RollbackTarget")
+  logs         DeploymentLog[]
+  alertEvents  AlertEvent[]
+
+  @@index([projectId, environmentId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("deployments")
+}
+
+// ─── Rollbacks ──────────────────────────────────────────────────────
+
+model Rollback {
+  id                     String    @id @default(uuid())
+  deploymentId           String    @map("deployment_id")
+  rollbackToDeploymentId String    @map("rollback_to_deployment_id")
+  initiatedBy            String    @map("initiated_by")
+  reason                 String
+  category               String    @default("manual")
+  status                 String    @default("in_progress")
+  startedAt              DateTime  @default(now()) @map("started_at")
+  finishedAt             DateTime? @map("finished_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+
+  deployment       Deployment @relation("DeploymentRollbacks", fields: [deploymentId], references: [id])
+  targetDeployment Deployment @relation("RollbackTarget", fields: [rollbackToDeploymentId], references: [id])
+  initiator        User       @relation(fields: [initiatedBy], references: [id])
+
+  @@map("rollbacks")
+}
+
+// ─── Deployment Logs ────────────────────────────────────────────────
+
+model DeploymentLog {
+  id           String   @id @default(uuid())
+  deploymentId String   @map("deployment_id")
+  level        String   @default("info")
+  message      String
+  timestamp    DateTime @default(now())
+
+  deployment Deployment @relation(fields: [deploymentId], references: [id])
+
+  @@index([deploymentId, timestamp])
+  @@map("deployment_logs")
+}
+
+// ─── Users ──────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("viewer")
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  deployments  Deployment[] @relation("DeploymentInitiator")
+  rollbacks    Rollback[]
+
+  @@map("users")
+}
+
+// ─── Alert Rules ────────────────────────────────────────────────────
+
+model AlertRule {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  name      String
+  condition String
+  channels  String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project     Project      @relation(fields: [projectId], references: [id])
+  alertEvents AlertEvent[]
+
+  @@map("alert_rules")
+}
+
+// ─── Alert Events ───────────────────────────────────────────────────
+
+model AlertEvent {
+  id           String   @id @default(uuid())
+  alertRuleId  String   @map("alert_rule_id")
+  deploymentId String   @map("deployment_id")
+  payload      String
+  delivered    Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  alertRule  AlertRule  @relation(fields: [alertRuleId], references: [id])
+  deployment Deployment @relation(fields: [deploymentId], references: [id])
+
+  @@map("alert_events")
+}

@@ -1,4 +1,4 @@
-const API_BASE = '/api/v1';
+const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api/v1';
 
 class ApiClient {
   private token: string | null = null;
@@ -43,12 +43,22 @@ class ApiClient {
       throw new Error('Unauthorized');
     }
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${res.status}`);
+    const text = await res.text();
+    let data: any = {};
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
     }
 
-    return res.json();
+    if (!res.ok) {
+      const errorMsg = data?.message || data?.error || `HTTP ${res.status}`;
+      throw new Error(errorMsg);
+    }
+
+    return data as T;
   }
 
   get<T>(path: string) { return this.request<T>(path); }

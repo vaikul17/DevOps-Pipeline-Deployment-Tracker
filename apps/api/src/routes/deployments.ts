@@ -95,8 +95,11 @@ deploymentRoutes.post('/', authenticate, async (req: AuthRequest, res, next) => 
 
     const deployment = await prisma.deployment.create({
       data: {
-        ...body,
+        projectId: body.projectId,
+        environmentId: body.environmentId,
+        buildId: body.buildId,
         strategy: body.strategy || 'rolling',
+        metadata: body.metadata ? JSON.stringify(body.metadata) : undefined,
         initiatedBy: req.user!.id,
         status: 'in_progress',
         startedAt: new Date(),

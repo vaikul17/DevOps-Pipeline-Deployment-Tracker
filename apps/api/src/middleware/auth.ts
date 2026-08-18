@@ -39,5 +39,5 @@ export function authorize(...roles: string[]) {
 }
 
 export function generateToken(user: { id: string; email: string; role: string; orgId: string }) {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+  return jwt.sign(user, JWT_SECRET, { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any });
 }
